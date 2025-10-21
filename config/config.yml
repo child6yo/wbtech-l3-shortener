@@ -1,0 +1,7 @@
+app_address: ":8080"
+
+pg_host: "localhost"
+pg_port: "5432"
+pg_username: "postgres"
+pg_db_name: "shortener"
+pg_ssl_mode: "disable"
