@@ -4,12 +4,19 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"math/rand"
 
 	"github.com/child6yo/wbtech-l3-shortener/internal/models"
 	"github.com/child6yo/wbtech-l3-shortener/internal/repository"
 )
 
 const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+const (
+	letterIdxBits = 6
+	letterIdxMask = 1<<letterIdxBits - 1
+	letterIdxMax  = 63 / letterIdxBits
+)
+
 const retries = 6
 const startLinkLenght = 3
 
@@ -68,20 +75,19 @@ func (ls *LinksShortener) addLink(ctx context.Context, link models.Link) error {
 	return nil
 }
 
-func generate(length int) string {
-	var state uint64 = 88172645463325252
-
-	next := func() uint64 {
-		state ^= state << 13
-		state ^= state >> 7
-		state ^= state << 17
-		return state
+func generate(n int) string {
+	b := make([]byte, n)
+	for i, cache, remain := n-1, rand.Int63(), letterIdxMax; i >= 0; {
+		if remain == 0 {
+			cache, remain = rand.Int63(), letterIdxMax
+		}
+		if idx := int(cache & letterIdxMask); idx < len(chars) {
+			b[i] = chars[idx]
+			i--
+		}
+		cache >>= letterIdxBits
+		remain--
 	}
 
-	const base = uint64(62)
-	buf := make([]byte, length)
-	for i := range buf {
-		buf[i] = chars[next()%base]
-	}
-	return string(buf)
+	return string(b)
 }
