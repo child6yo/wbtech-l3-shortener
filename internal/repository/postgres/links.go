@@ -22,11 +22,13 @@ func NewLinksRepository(db *dbpg.DB) *LinksRepository {
 
 // CreateLink создает новую ссылку в базе данных.
 func (lr *LinksRepository) CreateLink(ctx context.Context, link models.Link) error {
-	query := fmt.Sprintf("INSERT INTO %s (short, full) VALUES ($1, $2)", tableLinks)
+	query := fmt.Sprintf("INSERT INTO %s (short, destination) VALUES ($1, $2)", tableLinks)
 
 	_, err := lr.db.ExecContext(ctx, query, link.Short, link.Full)
 	if isUniqueViolation(err) {
 		return fmt.Errorf("repository: %w: %v", repository.ErrAlreadyExist, err)
+	} else if err != nil {
+		return fmt.Errorf("repository: %v", err)
 	}
 
 	return nil
