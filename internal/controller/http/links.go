@@ -25,8 +25,8 @@ func NewShortenerController(shr shortener) *ShortenerController {
 }
 
 type createShortenLinkRequest struct {
-	Short string `json:"short,omitempty" binding:"omitempty,shortname"`
-	Full  string `json:"full" binding:"required,url"`
+	CustomShort string `json:"custom,omitempty" binding:"omitempty,min=1,max=255"`
+	Full        string `json:"full" binding:"required,url"`
 }
 
 // Shorten обрабатывает POST /shorten — создание новой сокращённой ссылки.
@@ -42,7 +42,7 @@ func (sc *ShortenerController) Shorten(c *ginext.Context) {
 	c.Set("request", req)
 
 	link := models.Link{
-		Short: models.ShortLink(req.Short),
+		Short: models.ShortLink(req.CustomShort),
 		Full:  models.FullLink(req.Full),
 	}
 	shorten, err := sc.shr.AddLink(c.Request.Context(), link)
