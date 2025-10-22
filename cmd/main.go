@@ -20,6 +20,7 @@ import (
 
 const (
 	minimizeLinkRoute = "/shorten"
+	getFullLinkRoute  = "/s/:short_url"
 )
 
 type appConfig struct {
@@ -82,6 +83,7 @@ func main() {
 	srv := ginext.New("")
 	srv.Use(ginext.Logger(), ginext.Recovery(), mdlw.ErrHandlingMiddleware())
 	srv.POST(minimizeLinkRoute, sc.Shorten)
+	srv.GET(getFullLinkRoute, sc.Redirect)
 
 	httpServer := &http.Server{
 		Addr:    cfg.address,
@@ -100,6 +102,10 @@ func main() {
 	lgr.Info().Msg("shutting down gracefully...")
 
 	if err := httpServer.Shutdown(context.Background()); err != nil {
+		lgr.Err(err).Send()
+	}
+
+	if err := db.Master.Close(); err != nil {
 		lgr.Err(err).Send()
 	}
 

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"net/http"
 
 	"github.com/child6yo/wbtech-l3-shortener/internal/models"
 	"github.com/child6yo/wbtech-l3-shortener/internal/usecase"
@@ -12,6 +13,7 @@ import (
 
 type shortener interface {
 	AddLink(ctx context.Context, link models.Link) (models.ShortLink, error)
+	GetFullLink(ctx context.Context, shortLink models.ShortLink) (models.FullLink, error)
 }
 
 // ShortenerController http контроллер сокращателя ссылок.
@@ -52,9 +54,24 @@ func (sc *ShortenerController) Shorten(c *ginext.Context) {
 		return
 	} else if err != nil {
 		c.JSON(500, ginext.H{"error": "failed to create link"})
-		_ = c.Error(fmt.Errorf("failed to create link: %w", err))
+		_ = c.Error(fmt.Errorf("create link: %w", err))
 		return
 	}
 
 	c.JSON(200, ginext.H{"shorten_link": shorten})
+}
+
+// Redirect обрабатывает GET /s/{short_url} — переход по короткой ссылке.
+func (sc *ShortenerController) Redirect(c *ginext.Context) {
+	shortURL := c.Param("short_url")
+	c.Set("request", shortURL)
+
+	fullURL, err := sc.shr.GetFullLink(c.Request.Context(), models.ShortLink(shortURL))
+	if err != nil {
+		c.JSON(500, ginext.H{"error": "failed to redirect"})
+		_ = c.Error(fmt.Errorf("get full link: %w", err))
+		return
+	}
+
+	c.Redirect(http.StatusMovedPermanently, string(fullURL))
 }

@@ -36,7 +36,7 @@ func (lr *LinksRepository) CreateLink(ctx context.Context, link models.Link) err
 
 // GetFullLink возвращает полную ссылку по сокращенной.
 func (lr *LinksRepository) GetFullLink(ctx context.Context, short models.ShortLink) (models.FullLink, error) {
-	query := fmt.Sprintf("SELECT full FROM %s WHERE short=$1", tableLinks)
+	query := fmt.Sprintf("SELECT destination FROM %s WHERE short=$1", tableLinks)
 
 	row := lr.db.QueryRowContext(ctx, query, short)
 

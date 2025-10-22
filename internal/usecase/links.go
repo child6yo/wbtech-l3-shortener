@@ -36,12 +36,19 @@ func NewLinksShortener(repo linksRepository) *LinksShortener {
 }
 
 // AddLink добавляет новую ссылку. Если кастомной ссылки не предложено - генерирует.
-func (ls *LinksShortener) AddLink(ctx context.Context, link models.Link) (models.ShortLink, error) {
+func (ls *LinksShortener) AddLink(
+	ctx context.Context, link models.Link) (models.ShortLink, error) {
 	if link.Short == models.ShortLink("") {
 		return ls.generateLink(ctx, link.Full)
 	} else {
 		return link.Short, ls.addLink(ctx, link)
 	}
+}
+
+// GetFullLink возвращает полную ссылку по сокращенной.
+func (ls *LinksShortener) GetFullLink(
+	ctx context.Context, shortLink models.ShortLink) (models.FullLink, error) {
+	return ls.repo.GetFullLink(ctx, shortLink)
 }
 
 func (ls *LinksShortener) generateLink(ctx context.Context, link models.FullLink) (models.ShortLink, error) {
