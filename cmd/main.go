@@ -124,6 +124,10 @@ func main() {
 		lgr.Err(err).Send()
 	}
 
+	if err := adb.Close(); err != nil {
+		lgr.Err(err).Send()
+	}
+
 	wg.Wait()
 
 	lgr.Info().Msg("app exited")
