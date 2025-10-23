@@ -1,0 +1,109 @@
+services:
+  app:
+    container_name: shortener
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      - PG_USER
+      - PG_PASSWORD
+      - PG_DB
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+      redis:
+        condition: service_started
+
+    networks:
+      - dev-network
+
+  redis:
+    container_name: s-redis
+    image: redis:7-alpine
+    ports:
+      - "6380:6379"
+    command: redis-server --save "" --appendonly no
+    networks:
+      - dev-network
+  
+  postgres:
+    image: postgres:13-alpine
+    container_name: s-postgres
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 100
+    ports:
+      - "5432:5432"
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    volumes:
+      - ${POSTGRES_DATA_PATH}:/var/lib/postgresql/data
+    environment:
+      - TZ
+
+      - POSTGRES_USER=${PG_USER}
+      - POSTGRES_PASSWORD=${PG_PASSWORD}
+      - POSTGRES_DB=${PG_DB}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - dev-network
+
+  migrate_pg:
+    image: migrate/migrate:v4.18.0
+    command: ["-path=/migrations", "-database", "${PG_URL}", "up"]
+    volumes:
+      - ./schema/postgres:/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dev-network
+
+  clickhouse:
+    image: clickhouse/clickhouse-server:24.8
+    container_name: s-clickhouse
+    restart: unless-stopped
+    ports:
+      - "8123:8123" 
+      - "9000:9000"  
+    environment:
+      - TZ=${TZ}
+      - CLICKHOUSE_USER=${CH_USER}
+      - CLICKHOUSE_PASSWORD=${CH_PASSWORD}
+    healthcheck:
+      test: >
+        CMD-SHELL
+        curl --fail --silent --output /dev/null
+        "http://default:$$CLICKHOUSE_PASSWORD@localhost:8123/ping"
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 15s
+    networks:
+      - dev-network
+
+  migrate_ch:
+    image: migrate/migrate:v4.18.0
+    command: ["-path=/migrations", "-database", "${CH_URL}", "up"]
+    volumes:
+      - ./schema/clickhouse:/migrations
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - dev-network
+
+networks:
+  dev-network:
+    driver: bridge

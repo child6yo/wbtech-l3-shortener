@@ -36,6 +36,12 @@ type appConfig struct {
 	pgPassword string
 	pgSSLMode  string
 
+	chHost     string
+	chPort     string
+	chUsername string
+	chDBName   string
+	chPassword string
+
 	redisAddr     string
 	redisPassword string
 	redisDB       int
@@ -53,16 +59,25 @@ func initConfig(configFilePath, envFilePath, envPrefix string) (*appConfig, erro
 
 	appConfig.address = cfg.GetString("app_address")
 
-	appConfig.pgHost = cfg.GetString("pg_host")
-	appConfig.pgPort = cfg.GetString("pg_port")
+	// PostgreSQL
+	appConfig.pgHost = cfg.GetString("PG_HOST")
+	appConfig.pgPort = cfg.GetString("PG_PORT")
 	appConfig.pgPassword = cfg.GetString("PG_PASSWORD")
-	appConfig.pgUsername = cfg.GetString("pg_username")
-	appConfig.pgDBName = cfg.GetString("pg_db_name")
-	appConfig.pgSSLMode = cfg.GetString("pg_ssl_mode")
+	appConfig.pgUsername = cfg.GetString("PG_USER")
+	appConfig.pgDBName = cfg.GetString("PG_DB")
+	appConfig.pgSSLMode = cfg.GetString("PG_SSLMODE")
 
-	appConfig.redisAddr = cfg.GetString("redis_address")
-	appConfig.redisPassword = cfg.GetString("redis_password")
-	appConfig.redisDB = cfg.GetInt("redis_db")
+	// ClickHouse
+	appConfig.chHost = cfg.GetString("CH_HOST")
+	appConfig.chPort = cfg.GetString("CH_PORT")
+	appConfig.chUsername = cfg.GetString("CH_USER")
+	appConfig.chPassword = cfg.GetString("CH_PASSWORD")
+	appConfig.chDBName = cfg.GetString("CH_DB")
+
+	// Redis
+	appConfig.redisAddr = cfg.GetString("REDIS_ADDR")
+	appConfig.redisPassword = cfg.GetString("REDIS_PASSWORD")
+	appConfig.redisDB = cfg.GetInt("REDIS_DB")
 
 	return appConfig, nil
 }
@@ -89,7 +104,9 @@ func main() {
 		lgr.Fatal().Err(err).Send()
 	}
 
-	adb, err := clickhouse.NewClickhouseDB("127.0.0.1:9000", "default", "Qwerty", "default")
+	adb, err := clickhouse.NewClickhouseDB(
+		fmt.Sprintf("%s:%s", cfg.chHost, cfg.chPort),
+		cfg.chUsername, cfg.chPassword, cfg.chDBName)
 	if err != nil {
 		lgr.Fatal().Err(err).Send()
 	}
