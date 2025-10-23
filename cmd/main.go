@@ -13,6 +13,7 @@ import (
 	"github.com/child6yo/wbtech-l3-shortener/internal/logger"
 	"github.com/child6yo/wbtech-l3-shortener/internal/repository/clickhouse"
 	"github.com/child6yo/wbtech-l3-shortener/internal/repository/postgres"
+	"github.com/child6yo/wbtech-l3-shortener/internal/repository/redis"
 	"github.com/child6yo/wbtech-l3-shortener/internal/usecase"
 	"github.com/wb-go/wbf/config"
 	"github.com/wb-go/wbf/ginext"
@@ -34,6 +35,10 @@ type appConfig struct {
 	pgDBName   string
 	pgPassword string
 	pgSSLMode  string
+
+	redisAddr     string
+	redisPassword string
+	redisDB       int
 }
 
 func initConfig(configFilePath, envFilePath, envPrefix string) (*appConfig, error) {
@@ -54,6 +59,10 @@ func initConfig(configFilePath, envFilePath, envPrefix string) (*appConfig, erro
 	appConfig.pgUsername = cfg.GetString("pg_username")
 	appConfig.pgDBName = cfg.GetString("pg_db_name")
 	appConfig.pgSSLMode = cfg.GetString("pg_ssl_mode")
+
+	appConfig.redisAddr = cfg.GetString("redis_address")
+	appConfig.redisPassword = cfg.GetString("redis_password")
+	appConfig.redisDB = cfg.GetInt("redis_db")
 
 	return appConfig, nil
 }
@@ -85,10 +94,15 @@ func main() {
 		lgr.Fatal().Err(err).Send()
 	}
 
+	rds, err := redis.NewRedis(cfg.redisAddr, cfg.redisPassword, cfg.redisDB)
+	if err != nil {
+		lgr.Fatal().Err(err).Send()
+	}
+
 	lr := postgres.NewLinksRepository(db)
 	tr := clickhouse.NewTransitsRepository(adb)
 
-	sh := usecase.NewLinksShortener(lr)
+	sh := usecase.NewLinksShortener(lr, rds)
 	ans := usecase.NewAnalyticsManager(tr)
 
 	sc := httpctrl.NewShortenerController(sh, ans)
@@ -125,6 +139,10 @@ func main() {
 	}
 
 	if err := adb.Close(); err != nil {
+		lgr.Err(err).Send()
+	}
+
+	if err := rds.Client.Close(); err != nil {
 		lgr.Err(err).Send()
 	}
 

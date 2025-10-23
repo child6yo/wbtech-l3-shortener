@@ -4,7 +4,9 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log"
 	"math/rand"
+	"time"
 
 	"github.com/child6yo/wbtech-l3-shortener/internal/models"
 	"github.com/child6yo/wbtech-l3-shortener/internal/repository"
@@ -25,14 +27,20 @@ type linksRepository interface {
 	GetFullLink(ctx context.Context, short models.ShortLink) (models.FullLink, error)
 }
 
+type cacheStorage interface {
+	Add(ctx context.Context, key string, value interface{}, exp time.Duration) error
+	Get(ctx context.Context, key string) (string, error)
+}
+
 // LinksShortener сокращает ссылки и сохраняет их в репозиторий.
 type LinksShortener struct {
-	repo linksRepository
+	repo  linksRepository
+	cache cacheStorage
 }
 
 // NewLinksShortener создает новый LinksShortener.
-func NewLinksShortener(repo linksRepository) *LinksShortener {
-	return &LinksShortener{repo: repo}
+func NewLinksShortener(repo linksRepository, cache cacheStorage) *LinksShortener {
+	return &LinksShortener{repo: repo, cache: cache}
 }
 
 // AddLink добавляет новую ссылку. Если кастомной ссылки не предложено - генерирует.
@@ -48,7 +56,21 @@ func (ls *LinksShortener) AddLink(
 // GetFullLink возвращает полную ссылку по сокращенной.
 func (ls *LinksShortener) GetFullLink(
 	ctx context.Context, shortLink models.ShortLink) (models.FullLink, error) {
-	return ls.repo.GetFullLink(ctx, shortLink)
+	cachedLink, err := ls.cache.Get(ctx, string(shortLink))
+	if err == nil {
+		return models.FullLink(cachedLink), nil
+	}
+
+	fullLink, err := ls.repo.GetFullLink(ctx, shortLink)
+	if err != nil {
+		return models.FullLink(""), err
+	}
+
+	err = ls.cache.Add(ctx, string(shortLink), string(fullLink), 24*time.Hour)
+	if err != nil {
+		log.Panic(err)
+	}
+	return fullLink, nil
 }
 
 func (ls *LinksShortener) generateLink(ctx context.Context, link models.FullLink) (models.ShortLink, error) {

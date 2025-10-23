@@ -5,3 +5,7 @@ pg_port: "5432"
 pg_username: "postgres"
 pg_db_name: "shortener"
 pg_ssl_mode: "disable"
+
+redis_address: "localhost:6380"
+redis_password: ""
+redis_db: 0
