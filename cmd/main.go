@@ -11,6 +11,7 @@ import (
 
 	httpctrl "github.com/child6yo/wbtech-l3-shortener/internal/controller/http"
 	"github.com/child6yo/wbtech-l3-shortener/internal/logger"
+	"github.com/child6yo/wbtech-l3-shortener/internal/repository/clickhouse"
 	"github.com/child6yo/wbtech-l3-shortener/internal/repository/postgres"
 	"github.com/child6yo/wbtech-l3-shortener/internal/usecase"
 	"github.com/wb-go/wbf/config"
@@ -21,6 +22,7 @@ import (
 const (
 	minimizeLinkRoute = "/shorten"
 	getFullLinkRoute  = "/s/:short_url"
+	analyticsRoute    = "/analytics/:short_url"
 )
 
 type appConfig struct {
@@ -74,16 +76,29 @@ func main() {
 		cfg.pgHost, cfg.pgPort, cfg.pgUsername,
 		cfg.pgDBName, cfg.pgPassword, cfg.pgSSLMode,
 	)
+	if err != nil {
+		lgr.Fatal().Err(err).Send()
+	}
+
+	adb, err := clickhouse.NewClickhouseDB("127.0.0.1:9000", "default", "Qwerty", "default")
+	if err != nil {
+		lgr.Fatal().Err(err).Send()
+	}
 
 	lr := postgres.NewLinksRepository(db)
+	tr := clickhouse.NewTransitsRepository(adb)
+
 	sh := usecase.NewLinksShortener(lr)
-	sc := httpctrl.NewShortenerController(sh)
+	ans := usecase.NewAnalyticsManager(tr)
+
+	sc := httpctrl.NewShortenerController(sh, ans)
 	mdlw := httpctrl.NewMiddleware(logger.NewLoggerAdapter(lgr))
 
 	srv := ginext.New("")
 	srv.Use(ginext.Logger(), ginext.Recovery(), mdlw.ErrHandlingMiddleware())
 	srv.POST(minimizeLinkRoute, sc.Shorten)
 	srv.GET(getFullLinkRoute, sc.Redirect)
+	srv.GET(analyticsRoute, sc.GetAnalytics)
 
 	httpServer := &http.Server{
 		Addr:    cfg.address,
