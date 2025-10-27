@@ -48,9 +48,9 @@ func (ls *LinksShortener) AddLink(
 	ctx context.Context, link models.Link) (models.ShortLink, error) {
 	if link.Short == models.ShortLink("") {
 		return ls.generateLink(ctx, link.Full)
-	} else {
-		return link.Short, ls.addLink(ctx, link)
 	}
+	
+	return link.Short, ls.addLink(ctx, link)
 }
 
 // GetFullLink возвращает полную ссылку по сокращенной.

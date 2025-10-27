@@ -9,6 +9,7 @@ type Transit struct {
 	UserAgent string
 }
 
+// TransitAggregationQuery определяет модель запроса на аналитику с агрегацией по переходам.
 type TransitAggregationQuery struct {
 	Link ShortLink
 
@@ -17,6 +18,7 @@ type TransitAggregationQuery struct {
 	GroupByUserAgent bool
 }
 
+// TransitAggregationResult определяет модель ответа на TransitAggregationQuery.
 type TransitAggregationResult struct {
 	Date      *time.Time `json:"date,omitempty"`
 	UserAgent *string    `json:"user_agent,omitempty"`

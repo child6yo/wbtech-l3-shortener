@@ -71,7 +71,9 @@ func (tr *TransitsRepository) GetAggregatedTransits(
 	if err != nil {
 		return nil, fmt.Errorf("repository: failed to execute query: %w", err)
 	}
-	defer rows.Close()
+	defer func() {
+		_ = rows.Close()
+	}()
 
 	columns, err := rows.Columns()
 	if err != nil {
