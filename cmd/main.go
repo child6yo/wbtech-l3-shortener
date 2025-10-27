@@ -97,8 +97,8 @@ func main() {
 	}
 
 	db, err := postgres.NewMSPostgresDB(
-		cfg.pgHost, cfg.pgPort, cfg.pgUsername,
-		cfg.pgDBName, cfg.pgPassword, cfg.pgSSLMode,
+		fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
+			cfg.pgHost, cfg.pgPort, cfg.pgUsername, cfg.pgDBName, cfg.pgPassword, cfg.pgSSLMode),
 	)
 	if err != nil {
 		lgr.Fatal().Err(err).Send()

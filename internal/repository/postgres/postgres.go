@@ -1,8 +1,6 @@
 package postgres
 
 import (
-	"fmt"
-
 	"github.com/wb-go/wbf/dbpg"
 )
 
@@ -12,9 +10,6 @@ const (
 
 // NewMSPostgresDB создает новое подключение к базе данных postgres, поддерживающее
 // master-slave масштабирование.
-func NewMSPostgresDB(host, port, username, dbName, password, sslMode string) (*dbpg.DB, error) {
-	dsn := fmt.Sprintf("host=%s port=%s user=%s dbname=%s password=%s sslmode=%s",
-		host, port, username, dbName, password, sslMode)
-
-	return dbpg.New(dsn, []string{}, &dbpg.Options{})
+func NewMSPostgresDB(masterDSN string, slavesDSNs ...string) (*dbpg.DB, error) {
+	return dbpg.New(masterDSN, slavesDSNs, &dbpg.Options{})
 }
